@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model account {
+  id                Int                 @id @default(autoincrement())
+  username          String              @unique @db.VarChar(50)
+  email             String              @unique @db.VarChar(100)
+  password          String              @db.VarChar(255)
+  full_name         String?             @db.VarChar(100)
+  is_active         Boolean             @default(true)
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  updated_at        DateTime            @default(now()) @db.Timestamp(6)
+  role              String              @default("STUDENT") @db.VarChar(50)
+  classroom         classroom[]
+  classroom_student classroom_student[]
+  refresh_token     refresh_token[]
+}
+
+model refresh_token {
+  id         Int      @id @default(autoincrement())
+  account_id Int
+  token      String   @unique @db.VarChar(500)
+  expires_at DateTime @db.Timestamp(6)
+  is_revoked Boolean  @default(false)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  account    account  @relation(fields: [account_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_refresh_token_account")
+}
+
+model classroom {
+  id                Int                 @id @default(autoincrement())
+  teacher_id        Int
+  code              String              @unique @db.VarChar(50)
+  name_class        String              @db.VarChar(100)
+  description       String?
+  is_active         Boolean             @default(true)
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  updated_at        DateTime            @default(now()) @db.Timestamp(6)
+  account           account             @relation(fields: [teacher_id], references: [id], onUpdate: NoAction, map: "fk_classroom_teacher")
+  classroom_student classroom_student[]
+}
+
+model classroom_student {
+  id           Int       @id @default(autoincrement())
+  classroom_id Int
+  student_id   Int
+  joined_at    DateTime  @default(now()) @db.Timestamp(6)
+  account      account   @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_classroom_student_account")
+  classroom    classroom @relation(fields: [classroom_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_classroom_student_classroom")
+
+  @@unique([classroom_id, student_id], map: "uq_classroom_student")
+}
