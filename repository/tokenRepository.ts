@@ -2,7 +2,7 @@ import { prisma } from "../config/database.js";
 import crypto from "node:crypto";
 
 class TokenRepository {
-  async saveRefreshToken(account, token) {
+  async saveRefreshToken(account: { id: number }, token: string) {
     const refreshTokenExpiresAt = new Date(
       Date.now() + 7 * 24 * 60 * 60 * 1000,
     );
@@ -17,7 +17,7 @@ class TokenRepository {
     });
   }
 
-  async findValidRefreshToken(accountId, token) {
+  async findValidRefreshToken(accountId: number, token: string) {
     return prisma.refresh_token.findFirst({
       where: {
         account_id: accountId,
@@ -30,7 +30,7 @@ class TokenRepository {
     });
   }
 
-  async deleteRefreshToken(refreshToken) {
+  async deleteRefreshToken(refreshToken: string) {
     return prisma.refresh_token.delete({
       where: {
         token: this.hashToken(refreshToken),
@@ -38,7 +38,7 @@ class TokenRepository {
     });
   }
 
-  hashToken(token) {
+  hashToken(token: string) {
     return crypto.createHash("sha256").update(token).digest("hex");
   }
 }

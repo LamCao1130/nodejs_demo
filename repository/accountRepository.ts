@@ -1,21 +1,27 @@
+import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
 
 export const accountRepository = {
-  createAccount(account) {
+  createAccount(account: Prisma.accountCreateInput) {
     return prisma.account.create({
       data: account,
+      omit: { password: true },
     });
   },
-  getAccountByEmail(email) {
-    return prisma.account.findFirst({
-      where: { email: email },
+  getAccountByEmail(email: string) {
+    if (typeof email !== "string" || email.trim() === "") {
+      return Promise.resolve(null);
+    }
+    return prisma.account.findUnique({
+      where: { email },
     });
   },
-  getAccountById(id) {
+  getAccountById(id: number) {
     return prisma.account.findUnique({
       where: {
         id: id,
       },
+      omit: { password: true },
     });
   },
   async getAllAccountTeacher() {
@@ -36,7 +42,7 @@ export const accountRepository = {
     return data;
   },
 
-  async searchTeacher(page, pageSize) {
+  async searchTeacher(page: number, pageSize: number) {
     const [data, total] = await prisma.$transaction([
       prisma.account.findMany({
         select: {
