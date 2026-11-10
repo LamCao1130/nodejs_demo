@@ -1,17 +1,22 @@
+import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../config/database.js";
 
 class ClassRoomRepository {
-  async createClassRoom(classroom) {
+  async createClassRoom(classroom: Prisma.classroomUncheckedCreateInput) {
     return prisma.classroom.create({ data: classroom });
   }
 
-  async getClassByCode(code) {
-    return prisma.classroom.findFirst({
-      where: { code: code },
+  async getClassByCode(code: string) {
+    if (typeof code !== "string" || code.trim() === "") {
+      return null;
+    }
+    // code là @unique -> dùng findUnique
+    return prisma.classroom.findUnique({
+      where: { code },
     });
   }
 
-  async searchClassRoom(page, pageSize) {
+  async searchClassRoom(page: number, pageSize: number) {
     const [data, total] = await prisma.$transaction([
       prisma.classroom.findMany({
         select: {
