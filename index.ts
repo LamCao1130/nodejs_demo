@@ -1,8 +1,9 @@
+import "dotenv/config";
 import express from "express";
 import bodyParser from "body-parser";
 import router from "./router.js";
-import "dotenv/config";
 import cors from "cors";
+import { errorHandler, notFoundHandler } from "./service/AppError.js";
 
 const app = express();
 
@@ -21,6 +22,8 @@ app.use(
 );
 
 app.use(router);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
