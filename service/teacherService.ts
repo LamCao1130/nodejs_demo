@@ -11,8 +11,19 @@ const CreateTeacherSchema = z.object({
 });
 
 interface PageBody {
-  page?: unknown;
-  limit?: unknown;
+  search: {
+    username: string;
+    email: string;
+    full_name: string;
+    is_active: boolean;
+  };
+  pagination: { page?: unknown; limit?: unknown };
+}
+
+interface UpdateBody {
+  id: number;
+  full_name: string;
+  is_active: boolean;
 }
 
 class TeacherService {
@@ -36,16 +47,25 @@ class TeacherService {
   }
 
   async searchTeacher(body?: PageBody) {
-    const page = Math.max(1, Math.floor(Number(body?.page)) || 1);
+    const page = Math.max(1, Math.floor(Number(body?.pagination.page)) || 1);
     const pageSize = Math.min(
       100,
-      Math.max(1, Math.floor(Number(body?.limit)) || 10),
+      Math.max(1, Math.floor(Number(body?.pagination.limit)) || 10),
     );
-    return accountRepository.searchTeacher(page, pageSize);
+
+    return accountRepository.searchTeacher(body?.search, { page, pageSize });
   }
 
   async getAllTeacher() {
     return accountRepository.getAllAccountTeacher();
+  }
+
+  async deleteTeacher(accountId: number) {
+    return accountRepository.deleteTeacher(accountId);
+  }
+
+  async updateTeacher(bodyUpdate: UpdateBody) {
+    return accountRepository.updateTeacher(bodyUpdate);
   }
 }
 
