@@ -29,6 +29,7 @@ export const accountRepository = {
       prisma.account.findMany({
         where: {
           role: "TEACHER",
+          is_active: true,
         },
         select: {
           id: true,
@@ -42,7 +43,7 @@ export const accountRepository = {
     return data;
   },
 
-  async searchTeacher(page: number, pageSize: number) {
+  async searchTeacher(search: any, pagination: any) {
     const [data, total] = await prisma.$transaction([
       prisma.account.findMany({
         select: {
@@ -50,19 +51,78 @@ export const accountRepository = {
           email: true,
           full_name: true,
           username: true,
+          is_active: true,
         },
         where: {
+          email: {
+            contains: search.email,
+            mode: "insensitive",
+          },
+          username: {
+            contains: search.username,
+            mode: "insensitive",
+          },
+          full_name: {
+            contains: search.full_name,
+            mode: "insensitive",
+          },
+          is_active: search.is_active,
           role: "TEACHER",
         },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        skip: (pagination.page - 1) * pagination.pageSize,
+        take: pagination.pageSize,
       }),
 
-      prisma.account.count({ where: { role: "TEACHER" } }),
+      prisma.account.count({
+        where: {
+          email: {
+            contains: search.email,
+            mode: "insensitive",
+          },
+          username: {
+            contains: search.username,
+            mode: "insensitive",
+          },
+          full_name: {
+            contains: search.full_name,
+            mode: "insensitive",
+          },
+          is_active: search.is_active,
+          role: "TEACHER",
+        },
+      }),
     ]);
     return {
       data,
       total,
     };
+  },
+
+  async deleteTeacher(accountId: number) {
+    const result = await prisma.account.updateMany({
+      where: {
+        id: accountId,
+        role: "TEACHER",
+      },
+      data: {
+        is_active: false,
+      },
+    });
+
+    return result.count > 0;
+  },
+
+  async updateTeacher(accountTeacher: any) {
+    const result = await prisma.account.update({
+      where: {
+        id: accountTeacher.id,
+      },
+      data: {
+        full_name: accountTeacher.full_name,
+        is_active: accountTeacher.is_active,
+      },
+    });
+
+    return result.id;
   },
 };

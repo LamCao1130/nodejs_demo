@@ -46,4 +46,18 @@ router.post(
   authorizeRole(["ADMIN"]),
   classController.searchClassRoom,
 );
+
+router.delete(
+  "/admin/deleteTeacher/:id",
+  jwtAuthencation,
+  authorizeRole(["ADMIN"]),
+  teacherController.deleteTeacher,
+);
+
+router.put(
+  "/admin/updateTeacher",
+  jwtAuthencation,
+  authorizeRole(["ADMIN"]),
+  teacherController.updateTeacher,
+);
 export default router;

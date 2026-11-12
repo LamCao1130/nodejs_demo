@@ -122,6 +122,7 @@ export const createRefreshToken = (account: Pick<TokenAccount, "id">) => {
     JWT_REFRESH_SECRET,
     {
       expiresIn: "7d",
+      jwtid: crypto.randomUUID(), // đảm bảo rằng khi cùng iat sẽ không bị trùng refreshToken khi mà cùng accountId
     },
   );
 };
