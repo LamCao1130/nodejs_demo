@@ -23,5 +23,17 @@ class TeacherController {
     await teacherService.updateTeacher(req.body);
     return res.status(200).json({ message: "update success" });
   };
+
+  createRequestTeacher = async (req: Request, res: Response) => {
+    const fileCV = req.file;
+
+    if (!fileCV) {
+      return res.status(400).json({
+        message: "CV file is required",
+      });
+    }
+    const result = await teacherService.createRequestTeacher(req.body, fileCV);
+    return res.status(201).json(result);
+  };
 }
 export default new TeacherController();
