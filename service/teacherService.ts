@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 import { accountRepository } from "../repository/accountRepository.js";
 import { AppError } from "./AppError.js";
+import requestTeacherRepository from "../repository/requestTeacherRepository.ts";
 
 const CreateTeacherSchema = z.object({
   username: z.string(),
@@ -24,6 +25,31 @@ interface UpdateBody {
   id: number;
   full_name: string;
   is_active: boolean;
+}
+
+interface requestTeacherBody {
+  username: string;
+  email: string;
+  full_name: string;
+  file_cv: string;
+  status: string;
+  origin_file_cv: string;
+}
+
+interface fileCV {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  path: string;
+  destination: string;
+  filename: string;
+  size: number;
+}
+interface bodyRequestTeacher {
+  username: string;
+  email: string;
+  full_name: string;
 }
 
 class TeacherService {
@@ -66,6 +92,27 @@ class TeacherService {
 
   async updateTeacher(bodyUpdate: UpdateBody) {
     return accountRepository.updateTeacher(bodyUpdate);
+  }
+
+  async createRequestTeacher(
+    requestTeacherBody: bodyRequestTeacher,
+    fileCV: Express.Multer.File,
+  ) {
+    const requestTeacher: requestTeacherBody = {
+      username: requestTeacherBody.username,
+      email: requestTeacherBody.email,
+      full_name: requestTeacherBody.full_name,
+      file_cv: fileCV.filename,
+      status: "OPEN",
+      origin_file_cv: fileCV.originalname,
+    };
+
+    const rs =
+      await requestTeacherRepository.createRequestTeacherRepository(
+        requestTeacher,
+      );
+
+    return rs.id;
   }
 }
 

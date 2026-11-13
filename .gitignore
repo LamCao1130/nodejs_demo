@@ -3,3 +3,7 @@ node_modules
 .env
 
 /generated/prisma
+
+# Uploaded files
+storage/cvRequestTeacher/*
+!storage/cvRequestTeacher/.gitkeep
