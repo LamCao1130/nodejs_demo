@@ -25,8 +25,8 @@ npm install
 # 3. Sinh Prisma Client (thư mục generated/ không được commit)
 npx prisma generate
 
-# 4. Đồng bộ schema vào DB
-npx prisma db push        # hoặc: npx prisma migrate dev
+# 4. Áp dụng migrations vào DB (xem mục "Migration (Prisma Migrate)")
+npx prisma migrate deploy
 
 # 5. Chạy server
 npm run dev               # tự reload khi sửa code
@@ -38,6 +38,55 @@ Server chạy tại `http://localhost:3000`.
 ## Biến môi trường
 
 Tạo file `.env` ở thư mục gốc (file này đã nằm trong `.gitignore`):
+
+```bash
+cp .env.example .env     # Windows PowerShell: Copy-Item .env.example .env
+```
+
+| Biến                 | Bắt buộc | Mô tả                                                                                |
+| -------------------- | -------- | ------------------------------------------------------------------------------------ |
+| `DATABASE_URL`       | có       | Chuỗi kết nối PostgreSQL, ví dụ `postgresql://postgres:postgres@localhost:5432/mydb` |
+| `JWT_ACCESS_SECRET`  | có       | Khoá ký access token                                                                 |
+| `JWT_REFRESH_SECRET` | có       | Khoá ký refresh token, **phải khác** `JWT_ACCESS_SECRET`                             |
+
+Thiếu `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` (hoặc hai giá trị trùng nhau) thì app throw lỗi ngay khi khởi động. Giá trị trong `.env.example` chỉ là mẫu, hãy đổi thành chuỗi ngẫu nhiên đủ dài khi chạy thật.
+
+## Migration (Prisma Migrate)
+
+Mọi thay đổi cấu trúc DB được lưu thành file SQL có thứ tự trong `prisma/migrations/` và commit cùng code, để máy nào cũng dựng được DB giống nhau. Bản đầu tiên là `0_init` (toàn bộ bảng hiện có).
+
+**Máy mới / DB trống** (clone về lần đầu, hoặc deploy):
+
+```bash
+npx prisma migrate deploy
+```
+
+**Khi sửa `prisma/schema.prisma`** (thêm bảng, cột, index...):
+
+```bash
+npx prisma migrate dev --name ten_thay_doi   # ví dụ: add_phone_to_account
+```
+
+Lệnh này sinh thư mục migration mới, áp vào DB local và chạy lại `prisma generate`. Đọc file `migration.sql` vừa sinh trước khi commit, rồi commit cả thư mục đó cùng `schema.prisma`.
+
+**Kiểm tra trạng thái:**
+
+```bash
+npx prisma migrate status
+```
+
+**DB đã có sẵn bảng** (tạo trước khi dùng migrations) thì không chạy `deploy` ngay, mà đánh dấu bản đầu là đã áp dụng:
+
+```bash
+npx prisma migrate resolve --applied 0_init
+```
+
+Lưu ý:
+
+- Không sửa hay xoá file migration đã commit; muốn đổi tiếp thì tạo migration mới.
+- Đã dùng `migrate` thì không dùng `prisma db push` cho DB đó, vì lịch sử migration sẽ lệch với DB thật.
+- `migrate dev` chỉ dùng ở máy phát triển. Môi trường thật dùng `migrate deploy`.
+- Bảng `request_teacher` có check constraint chưa nằm trong `0_init`; DB dựng mới từ migration sẽ thiếu ràng buộc này cho tới khi bổ sung.
 
 ## Scripts
 
@@ -61,6 +110,7 @@ repository/               Truy vấn DB qua Prisma
 midlewareConfig/          jwtAuthencation (xác thực), Authorization (phân quyền role)
 config/database.ts        PrismaClient
 prisma/schema.prisma      Định nghĩa bảng
+prisma/migrations/        Lịch sử migration (file SQL theo thứ tự)
 test/                     Test Vitest
 ```
 

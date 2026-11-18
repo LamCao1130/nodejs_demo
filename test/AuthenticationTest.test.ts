@@ -72,7 +72,7 @@ describe("AccountController (service được mock)", () => {
     });
 
     test("ném lại AppError để errorHandler xử lý (không tự gửi body)", async () => {
-      const err = new AppError(404, { message: "sai mật khẩu hoặc tài khoản" });
+      const err = new AppError(401, { message: "Sai email hoặc mật khẩu" });
       vi.spyOn(accountService, "login").mockRejectedValue(err);
       const res = mockRes();
 

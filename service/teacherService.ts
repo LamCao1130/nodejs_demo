@@ -1,31 +1,15 @@
 import bcrypt from "bcrypt";
-import { z } from "zod";
-import { accountRepository } from "../repository/accountRepository.js";
+import fs from "node:fs";
+import type { z } from "zod";
 import { AppError } from "./AppError.js";
+import { accountRepository } from "../repository/accountRepository.js";
 import requestTeacherRepository from "../repository/requestTeacherRepository.ts";
-
-const CreateTeacherSchema = z.object({
-  username: z.string(),
-  email: z.string(),
-  password: z.string(),
-  full_name: z.string(),
-});
-
-interface PageBody {
-  search: {
-    username: string;
-    email: string;
-    full_name: string;
-    is_active: boolean;
-  };
-  pagination: { page?: unknown; limit?: unknown };
-}
-
-interface UpdateBody {
-  id: number;
-  full_name: string;
-  is_active: boolean;
-}
+import type {
+  CreateTeacherSchema,
+  SearchTeacherInput,
+  UpdateTeacherInput,
+  RequestTeacherInput,
+} from "../schema/teacherSchema.js";
 
 interface requestTeacherBody {
   username: string;
@@ -46,25 +30,8 @@ interface fileCV {
   filename: string;
   size: number;
 }
-interface bodyRequestTeacher {
-  username: string;
-  email: string;
-  full_name: string;
-}
-
 class TeacherService {
-  async createTeacher(body: unknown) {
-    const parsed = CreateTeacherSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new AppError(400, {
-        message: "Dữ liệu không hợp lệ",
-        errors: parsed.error.issues.map((i) => ({
-          field: i.path.join("."),
-          message: i.message,
-        })),
-      });
-    }
-    const teacher = parsed.data;
+  async createTeacher(teacher: z.infer<typeof CreateTeacherSchema>) {
     return accountRepository.createAccount({
       ...teacher,
       role: "TEACHER",
@@ -72,14 +39,11 @@ class TeacherService {
     });
   }
 
-  async searchTeacher(body?: PageBody) {
-    const page = Math.max(1, Math.floor(Number(body?.pagination.page)) || 1);
-    const pageSize = Math.min(
-      100,
-      Math.max(1, Math.floor(Number(body?.pagination.limit)) || 10),
-    );
-
-    return accountRepository.searchTeacher(body?.search, { page, pageSize });
+  async searchTeacher(body: SearchTeacherInput) {
+    return accountRepository.searchTeacher(body.search, {
+      page: body.pagination.page,
+      pageSize: body.pagination.limit,
+    });
   }
 
   async getAllTeacher() {
@@ -87,15 +51,21 @@ class TeacherService {
   }
 
   async deleteTeacher(accountId: number) {
-    return accountRepository.deleteTeacher(accountId);
+    const deleted = await accountRepository.deleteTeacher(accountId);
+    if (!deleted) {
+      throw new AppError(404, { message: "Không tìm thấy giáo viên" });
+    }
   }
 
-  async updateTeacher(bodyUpdate: UpdateBody) {
-    return accountRepository.updateTeacher(bodyUpdate);
+  async updateTeacher(id: number, body: UpdateTeacherInput) {
+    const updated = await accountRepository.updateTeacher(id, body);
+    if (!updated) {
+      throw new AppError(404, { message: "Không tìm thấy giáo viên" });
+    }
   }
 
   async createRequestTeacher(
-    requestTeacherBody: bodyRequestTeacher,
+    requestTeacherBody: RequestTeacherInput,
     fileCV: Express.Multer.File,
   ) {
     const requestTeacher: requestTeacherBody = {
@@ -107,12 +77,21 @@ class TeacherService {
       origin_file_cv: fileCV.originalname,
     };
 
-    const rs =
-      await requestTeacherRepository.createRequestTeacherRepository(
-        requestTeacher,
-      );
-
-    return rs.id;
+    try {
+      const rs =
+        await requestTeacherRepository.createRequestTeacherRepository(
+          requestTeacher,
+        );
+      return rs.id;
+    } catch (e) {
+      // Insert lỗi thì không để file mồ côi trên ổ đĩa
+      await fs.promises.unlink(fileCV.path).catch(() => {});
+      // email là @unique: gửi CV lần 2 -> P2002 -> 409 thay vì 500
+      if ((e as { code?: string })?.code === "P2002") {
+        throw new AppError(409, { message: "Email này đã gửi yêu cầu" });
+      }
+      throw e;
+    }
   }
 }
 
