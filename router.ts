@@ -9,6 +9,7 @@ import classController from "./controller/classController.js";
 import { jwtAuthencation } from "./midlewareConfig/jwtAuthencation.js";
 import { authorizeRole } from "./midlewareConfig/Authorization.js";
 import teacherController from "./controller/teacherController.js";
+import upload from "./midlewareConfig/uploadFileConfig.ts";
 const router = Router();
 
 router.post("/register", register);
@@ -59,5 +60,11 @@ router.put(
   jwtAuthencation,
   authorizeRole(["ADMIN"]),
   teacherController.updateTeacher,
+);
+
+router.post(
+  "/createRequestTeacher",
+  upload.single("cv"),
+  teacherController.createRequestTeacher,
 );
 export default router;
