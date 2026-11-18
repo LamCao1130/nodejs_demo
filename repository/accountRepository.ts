@@ -1,4 +1,5 @@
 import type { Prisma } from "../generated/prisma/client.js";
+import type { SearchTeacherInput } from "../schema/teacherSchema.js";
 import { prisma } from "../config/database.js";
 
 export const accountRepository = {
@@ -49,7 +50,10 @@ export const accountRepository = {
     return data;
   },
 
-  async searchTeacher(search: any, pagination: any) {
+  async searchTeacher(
+    search: SearchTeacherInput["search"],
+    pagination: { page: number; pageSize: number },
+  ) {
     const [data, total] = await prisma.$transaction([
       prisma.account.findMany({
         select: {

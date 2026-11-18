@@ -15,13 +15,13 @@ export const SearchTeacherSchema = z.object({
       full_name: z.string().optional(),
       is_active: z.boolean().optional(),
     })
-    .default({}),
+    .prefault({}),
   pagination: z
     .object({
-      page: z.coerce.number().int().min(1).optional(),
-      limit: z.coerce.number().int().min(1).max(100).optional(),
+      page: z.coerce.number().int().min(1).default(1),
+      limit: z.coerce.number().int().min(1).max(100).default(10),
     })
-    .default({}),
+    .prefault({}),
 });
 
 export const TeacherIdParamSchema = z.object({

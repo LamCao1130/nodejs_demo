@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import fs from "node:fs";
 import type { z } from "zod";
 import { AppError } from "./AppError.js";
 import { accountRepository } from "../repository/accountRepository.js";
@@ -39,10 +40,10 @@ class TeacherService {
   }
 
   async searchTeacher(body: SearchTeacherInput) {
-    const page = body.pagination.page ?? 1;
-    const pageSize = body.pagination.limit ?? 10;
-
-    return accountRepository.searchTeacher(body.search, { page, pageSize });
+    return accountRepository.searchTeacher(body.search, {
+      page: body.pagination.page,
+      pageSize: body.pagination.limit,
+    });
   }
 
   async getAllTeacher() {
@@ -50,7 +51,10 @@ class TeacherService {
   }
 
   async deleteTeacher(accountId: number) {
-    return accountRepository.deleteTeacher(accountId);
+    const deleted = await accountRepository.deleteTeacher(accountId);
+    if (!deleted) {
+      throw new AppError(404, { message: "Không tìm thấy giáo viên" });
+    }
   }
 
   async updateTeacher(id: number, body: UpdateTeacherInput) {
@@ -73,12 +77,21 @@ class TeacherService {
       origin_file_cv: fileCV.originalname,
     };
 
-    const rs =
-      await requestTeacherRepository.createRequestTeacherRepository(
-        requestTeacher,
-      );
-
-    return rs.id;
+    try {
+      const rs =
+        await requestTeacherRepository.createRequestTeacherRepository(
+          requestTeacher,
+        );
+      return rs.id;
+    } catch (e) {
+      // Insert lỗi thì không để file mồ côi trên ổ đĩa
+      await fs.promises.unlink(fileCV.path).catch(() => {});
+      // email là @unique: gửi CV lần 2 -> P2002 -> 409 thay vì 500
+      if ((e as { code?: string })?.code === "P2002") {
+        throw new AppError(409, { message: "Email này đã gửi yêu cầu" });
+      }
+      throw e;
+    }
   }
 }
 

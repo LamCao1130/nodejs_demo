@@ -27,6 +27,14 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     return res.status(err.status).json(toBody(err.body));
   }
 
+  // Lỗi từ multer (file quá lớn, sai tên field, quá số file...) là lỗi do client
+  if ((err as Error)?.name === "MulterError") {
+    const code = (err as { code?: string }).code;
+    return res
+      .status(code === "LIMIT_FILE_SIZE" ? 413 : 400)
+      .json({ message: (err as Error).message });
+  }
+
   const status = (err as { status?: unknown })?.status;
   if (typeof status === "number" && status >= 400 && status < 500) {
     return res.status(status).json({ message: (err as Error).message });

@@ -10,7 +10,10 @@ import { jwtAuthencation } from "./midlewareConfig/jwtAuthencation.js";
 import { authorizeRole } from "./midlewareConfig/Authorization.js";
 import { validate } from "./midlewareConfig/validate.js";
 import teacherController from "./controller/teacherController.js";
-import upload from "./midlewareConfig/uploadFileConfig.ts";
+import upload, {
+  verifyPdf,
+  saveUploadedFile,
+} from "./midlewareConfig/uploadFileConfig.ts";
 import {
   RegisterSchema,
   LoginSchema,
@@ -34,11 +37,7 @@ router.post(
   validate({ body: RefreshTokenSchema }),
   refreshAccessToken,
 );
-router.post(
-  "/api/v1/public/logout",
-  validate({ body: LogoutSchema }),
-  logout,
-);
+router.post("/api/v1/public/logout", validate({ body: LogoutSchema }), logout);
 router.post(
   "/admin/createClass",
   jwtAuthencation,
@@ -94,7 +93,9 @@ router.put(
 router.post(
   "/createRequestTeacher",
   upload.single("cv"),
+  verifyPdf,
   validate({ body: RequestTeacherSchema }),
+  saveUploadedFile,
   teacherController.createRequestTeacher,
 );
 export default router;

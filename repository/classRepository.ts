@@ -17,50 +17,29 @@ class ClassRoomRepository {
   }
 
   async searchClassRoom(page: number, pageSize: number) {
-    const [data, total] = await prisma.$transaction([
+    const [rows, total] = await prisma.$transaction([
       prisma.classroom.findMany({
         select: {
           code: true,
           name_class: true,
           teacher_id: true,
           description: true,
+          account: { select: { id: true, full_name: true, email: true } },
         },
+        // id làm tiêu chí phụ để phân trang ổn định khi created_at trùng nhau
+        orderBy: [{ created_at: "desc" }, { id: "desc" }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-
       prisma.classroom.count(),
     ]);
 
-    const teacherIds = [
-      ...new Set(
-        data.map((item) => item.teacher_id).filter((id) => id !== null),
-      ),
-    ];
-
-    const teachers = await prisma.account.findMany({
-      where: {
-        id: {
-          in: teacherIds,
-        },
-      },
-      select: {
-        id: true,
-        full_name: true,
-        email: true,
-      },
-    });
-
-    const result = data.map((classroom) => ({
+    const data = rows.map(({ account, ...classroom }) => ({
       ...classroom,
-      teacher:
-        teachers.find((teacher) => teacher.id === classroom.teacher_id) || null,
+      teacher: account,
     }));
 
-    return {
-      data: result,
-      total,
-    };
+    return { data, total };
   }
 }
 export default new ClassRoomRepository();
