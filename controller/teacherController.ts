@@ -20,7 +20,10 @@ class TeacherController {
   };
 
   updateTeacher = async (req: Request, res: Response) => {
-    await teacherService.updateTeacher(req.body);
+    await teacherService.updateTeacher(
+      Number(req.params.id),
+      req.body,
+    );
     return res.status(200).json({ message: "update success" });
   };
 

@@ -1,33 +1,41 @@
-import type { Prisma } from "../generated/prisma/client.js";
 import crypto from "node:crypto";
 import classRepository from "../repository/classRepository.js";
-
-interface PageBody {
-  page?: unknown;
-  limit?: unknown;
-}
+import { accountRepository } from "../repository/accountRepository.js";
+import { AppError } from "./AppError.js";
+import type {
+  CreateClassInput,
+  SearchClassInput,
+} from "../schema/classSchema.js";
 
 class ClassService {
-  async createClass(classroom: Omit<Prisma.classroomUncheckedCreateInput, "code" | "is_active">) {
+  async createClass(input: CreateClassInput) {
+    // teacher_id phải là tài khoản TEACHER đang active (không phải student/admin)
+    const teacher = await accountRepository.getActiveTeacherById(
+      input.teacher_id,
+    );
+    if (!teacher) {
+      throw new AppError(400, {
+        message: "teacher_id không phải giáo viên đang hoạt động",
+      });
+    }
+
     let code;
     do {
       code = this.generateCode();
     } while (await classRepository.getClassByCode(code));
 
+    // Chỉ lấy đúng các field được phép, không spread nguyên dữ liệu từ client
     return classRepository.createClassRoom({
-      ...classroom,
+      teacher_id: input.teacher_id,
+      name_class: input.name_class,
+      description: input.description,
       code,
       is_active: true,
     });
   }
 
-  async searchClassRoom(body?: PageBody) {
-    const page = Math.max(1, Math.floor(Number(body?.page)) || 1);
-    const pageSize = Math.min(
-      100,
-      Math.max(1, Math.floor(Number(body?.limit)) || 10),
-    );
-    return classRepository.searchClassRoom(page, pageSize);
+  async searchClassRoom(body: SearchClassInput) {
+    return classRepository.searchClassRoom(body.page ?? 1, body.limit ?? 10);
   }
 
   generateCode() {

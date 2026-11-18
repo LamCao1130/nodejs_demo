@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
-import { z } from "zod";
+import type { z } from "zod";
+import type { RegisterSchema } from "../schema/accountSchema.js";
 import { accountRepository } from "../repository/accountRepository.js";
 import tokenRepository from "../repository/tokenRepository.js";
 import {
@@ -9,26 +10,12 @@ import {
 } from "../midlewareConfig/jwtAuthencation.js";
 import { AppError } from "./AppError.js";
 
-const RegisterSchema = z.object({
-  username: z.string(),
-  email: z.string().email(),
-  password: z.string().min(6),
-  full_name: z.string().max(100).optional(),
-});
+// Hash hợp lệ (cost 10) dùng để so sánh giả khi email không tồn tại
+const DUMMY_HASH =
+  "$2b$10$CwTycUXWue0Thq9StjUM0uJ8.2hVq6s0yG5Zx5y8H1c8y3w7kq0e2";
 
 class AccountService {
-  async register(body: unknown) {
-    const parsed = RegisterSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new AppError(400, {
-        message: "Dữ liệu không hợp lệ",
-        errors: parsed.error.issues.map((i) => ({
-          field: i.path.join("."),
-          message: i.message,
-        })),
-      });
-    }
-    const input = parsed.data;
+  async register(input: z.infer<typeof RegisterSchema>) {
     const hashedPassword = await bcrypt.hash(input.password, 10);
     const created = await accountRepository.createAccount({
       ...input,
@@ -51,15 +38,20 @@ class AccountService {
       throw new AppError(400, { message: "Thiếu email hoặc mật khẩu" });
     }
     const account = await accountRepository.getAccountByEmail(email);
-    if (!account) {
-      throw new AppError(404, { message: "sai mật khẩu hoặc tài khoản" });
+    // Luôn chạy bcrypt.compare (kể cả khi không có account) để thời gian phản hồi
+    // không lộ email nào tồn tại.
+    const ok = await bcrypt.compare(
+      password,
+      account?.password ?? DUMMY_HASH,
+    );
+    if (!account || !ok) {
+      throw new AppError(401, { message: "Sai email hoặc mật khẩu" });
     }
+    // Chỉ báo khoá sau khi đã xác thực đúng mật khẩu
     if (!account.is_active) {
-      throw new AppError(403, "tài khoản đã bị khóa vui lòng liên hệ admin");
-    }
-    const isMatch = await bcrypt.compare(password, account.password);
-    if (!isMatch) {
-      throw new AppError(404, { message: "sai mật khẩu hoặc tài khoản" });
+      throw new AppError(403, {
+        message: "Tài khoản đã bị khoá, vui lòng liên hệ admin",
+      });
     }
     const accessToken = createAccessToken(account);
     const refreshToken = createRefreshToken(account);

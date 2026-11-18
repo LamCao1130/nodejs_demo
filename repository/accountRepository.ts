@@ -24,6 +24,12 @@ export const accountRepository = {
       omit: { password: true },
     });
   },
+  getActiveTeacherById(id: number) {
+    return prisma.account.findFirst({
+      where: { id, role: "TEACHER", is_active: true },
+      select: { id: true },
+    });
+  },
   async getAllAccountTeacher() {
     const [data] = await prisma.$transaction([
       prisma.account.findMany({
@@ -112,17 +118,21 @@ export const accountRepository = {
     return result.count > 0;
   },
 
-  async updateTeacher(accountTeacher: any) {
-    const result = await prisma.account.update({
-      where: {
-        id: accountTeacher.id,
-      },
+  async updateTeacher(
+    id: number,
+    data: { full_name: string; is_active: boolean },
+  ) {
+    // Chỉ cập nhật tài khoản TEACHER (giống deleteTeacher); id không tồn tại
+    // hoặc không phải teacher thì count = 0 thay vì ném lỗi P2025.
+    const result = await prisma.account.updateMany({
+      where: { id, role: "TEACHER" },
       data: {
-        full_name: accountTeacher.full_name,
-        is_active: accountTeacher.is_active,
+        full_name: data.full_name,
+        is_active: data.is_active,
+        updated_at: new Date(),
       },
     });
 
-    return result.id;
+    return result.count > 0;
   },
 };
