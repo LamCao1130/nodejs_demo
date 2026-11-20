@@ -54,9 +54,16 @@ export const saveUploadedFile = async (
     file.path = filePath;
     file.destination = uploadDir;
 
+    // Client đã ngắt trong lúc đang ghi file (controller đã dọn DB xong) -> bỏ file
+    if (res.locals.aborted) {
+      await fs.promises.unlink(filePath).catch(() => {});
+      return;
+    }
+
     // Nếu bước sau (vd. ghi DB) thất bại thì không để file mồ côi
-    res.on("finish", () => {
-      if (res.statusCode >= 400) fs.promises.unlink(filePath).catch(() => {});
+    res.on("close", () => {
+      if (!res.writableFinished || res.statusCode >= 400)
+        fs.promises.unlink(filePath).catch(() => {});
     });
     next();
   } catch (err) {

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import type { NextFunction, Request, Response } from "express";
 import teacherService from "../service/teacherService.js";
 import otpEmailService, {
@@ -30,6 +31,7 @@ class TeacherController {
 
   sendOTPVerifyEmailCreateTeacher = async (req: Request, res: Response) => {
     const email = req.body.email;
+    await teacherService.assertEmailAvailableForRequest(email);
     const otp = await otpEmailService.createOtp(
       email,
       OTP_PURPOSE_CREATE_TEACHER,
@@ -54,8 +56,13 @@ class TeacherController {
     const id = await teacherService.createRequestTeacher(req.body, fileCV);
     res.locals.requestTeacherId = id;
 
-    res.on("finish", () => {
-      if (res.statusCode >= 400) void teacherService.deleteRequestTeacher(id);
+    // "close" chạy cả khi response hoàn tất lẫn khi client ngắt kết nối giữa chừng
+    // ("finish" thì không), nên dùng nó để dọn bản ghi + file nếu chưa thành công.
+    res.on("close", () => {
+      if (res.writableFinished && res.statusCode < 400) return;
+      res.locals.aborted = true;
+      void teacherService.deleteRequestTeacher(id);
+      if (fileCV.path) fs.promises.unlink(fileCV.path).catch(() => {});
     });
     next();
   };

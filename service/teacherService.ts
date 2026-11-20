@@ -67,6 +67,16 @@ class TeacherService {
     }
   }
 
+  async assertEmailAvailableForRequest(email: string) {
+    const [hasAccount, hasRequest] = await Promise.all([
+      accountRepository.existsByEmail(email),
+      requestTeacherRepository.existsByEmail(email),
+    ]);
+    if (hasAccount || hasRequest) {
+      throw new AppError(409, { message: "Email đã tồn tại" });
+    }
+  }
+
   async createRequestTeacher(
     requestTeacherBody: RequestTeacherInput,
     fileCV: Express.Multer.File,
