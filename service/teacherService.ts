@@ -1,9 +1,12 @@
 import bcrypt from "bcrypt";
-import fs from "node:fs";
+import crypto from "node:crypto";
 import type { z } from "zod";
 import { AppError } from "./AppError.js";
 import { accountRepository } from "../repository/accountRepository.js";
 import requestTeacherRepository from "../repository/requestTeacherRepository.ts";
+import otpEmailService, {
+  OTP_PURPOSE_CREATE_TEACHER,
+} from "./otpEmailService.js";
 import type {
   CreateTeacherSchema,
   SearchTeacherInput,
@@ -68,6 +71,18 @@ class TeacherService {
     requestTeacherBody: RequestTeacherInput,
     fileCV: Express.Multer.File,
   ) {
+    const otpValid = await otpEmailService.verifyOtp(
+      requestTeacherBody.email,
+      OTP_PURPOSE_CREATE_TEACHER,
+      requestTeacherBody.otp,
+    );
+    if (!otpValid) {
+      throw new AppError(400, { message: "OTP không đúng hoặc đã hết hạn" });
+    }
+
+    // Tên file được định trước để lưu DB; saveUploadedFile sẽ ghi đúng tên này
+    fileCV.filename = crypto.randomUUID() + ".pdf";
+
     const requestTeacher: requestTeacherBody = {
       username: requestTeacherBody.username,
       email: requestTeacherBody.email,
@@ -84,14 +99,16 @@ class TeacherService {
         );
       return rs.id;
     } catch (e) {
-      // Insert lỗi thì không để file mồ côi trên ổ đĩa
-      await fs.promises.unlink(fileCV.path).catch(() => {});
       // email là @unique: gửi CV lần 2 -> P2002 -> 409 thay vì 500
       if ((e as { code?: string })?.code === "P2002") {
         throw new AppError(409, { message: "Email này đã gửi yêu cầu" });
       }
       throw e;
     }
+  }
+
+  async deleteRequestTeacher(id: number) {
+    await requestTeacherRepository.deleteById(id).catch(() => {});
   }
 }
 

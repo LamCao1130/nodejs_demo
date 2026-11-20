@@ -35,7 +35,7 @@ export const verifyPdf = (req: Request, _res: Response, next: NextFunction) => {
   next();
 };
 
-// Chạy cuối cùng, sau validate(body): ghi file xuống đĩa với tên ngẫu nhiên
+// Chạy sau khi controller đã verify OTP + lưu DB: ghi file xuống đĩa với tên ngẫu nhiên
 // (tên gốc đã lưu riêng ở cột origin_cv_file) rồi gán filename/path cho req.file.
 export const saveUploadedFile = async (
   req: Request,
@@ -46,7 +46,8 @@ export const saveUploadedFile = async (
   if (!file) return next();
 
   try {
-    const filename = crypto.randomUUID() + ".pdf";
+    // controller có thể đã định sẵn tên (đã lưu DB), nếu không thì tự sinh
+    const filename = file.filename || crypto.randomUUID() + ".pdf";
     const filePath = path.join(uploadDir, filename);
     await fs.promises.writeFile(filePath, file.buffer, { flag: "wx" });
     file.filename = filename;

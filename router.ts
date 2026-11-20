@@ -27,7 +27,9 @@ import {
   TeacherIdParamSchema,
   UpdateTeacherSchema,
   RequestTeacherSchema,
+  EmailRequestTeacher,
 } from "./schema/teacherSchema.js";
+import { sendOtpLimiter } from "./midlewareConfig/rateLimit.js";
 const router = Router();
 
 router.post("/register", validate({ body: RegisterSchema }), register);
@@ -91,11 +93,19 @@ router.put(
 );
 
 router.post(
+  "/sendOTPVerifyEmailCreateTeacher",
+  sendOtpLimiter,
+  validate({ body: EmailRequestTeacher }),
+  teacherController.sendOTPVerifyEmailCreateTeacher,
+);
+
+router.post(
   "/createRequestTeacher",
   upload.single("cv"),
   verifyPdf,
   validate({ body: RequestTeacherSchema }),
-  saveUploadedFile,
   teacherController.createRequestTeacher,
+  saveUploadedFile,
+  teacherController.finishCreateRequestTeacher,
 );
 export default router;

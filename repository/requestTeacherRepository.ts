@@ -14,5 +14,9 @@ class RequestTeacherRepository {
       },
     });
   }
+
+  async deleteById(id: number) {
+    return prisma.request_teacher.delete({ where: { id } });
+  }
 }
 export default new RequestTeacherRepository();

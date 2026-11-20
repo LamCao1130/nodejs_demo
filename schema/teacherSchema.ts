@@ -37,8 +37,14 @@ export const RequestTeacherSchema = z.object({
   username: z.string().min(1).max(50),
   email: z.string().email().max(100),
   full_name: z.string().max(100),
+  otp: z.string().max(8),
+});
+
+export const EmailRequestTeacher = z.object({
+  email: z.string().email().max(100),
 });
 
 export type SearchTeacherInput = z.infer<typeof SearchTeacherSchema>;
 export type UpdateTeacherInput = z.infer<typeof UpdateTeacherSchema>;
 export type RequestTeacherInput = z.infer<typeof RequestTeacherSchema>;
+export type EmailRequestTeacherInput = z.infer<typeof EmailRequestTeacher>;
