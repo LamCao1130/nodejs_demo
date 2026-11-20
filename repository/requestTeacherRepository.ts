@@ -14,5 +14,17 @@ class RequestTeacherRepository {
       },
     });
   }
+
+  async existsByEmail(email: string) {
+    const found = await prisma.request_teacher.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    return found !== null;
+  }
+
+  async deleteById(id: number) {
+    return prisma.request_teacher.delete({ where: { id } });
+  }
 }
 export default new RequestTeacherRepository();

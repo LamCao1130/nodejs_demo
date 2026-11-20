@@ -17,6 +17,13 @@ export const accountRepository = {
       where: { email },
     });
   },
+  async existsByEmail(email: string) {
+    const found = await prisma.account.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    return found !== null;
+  },
   getAccountById(id: number) {
     return prisma.account.findUnique({
       where: {
